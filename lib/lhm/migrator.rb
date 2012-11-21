@@ -13,12 +13,13 @@ module Lhm
     include Command
     include SqlHelper
 
-    attr_reader :name, :statements, :connection
+    attr_reader :name, :statements, :connection, :renamed
 
     def initialize(table, connection = nil)
       @connection = connection
       @origin = table
       @name = table.destination_name
+      @renamed = []
       @statements = []
     end
 
@@ -67,6 +68,24 @@ module Lhm
     # @param [String] definition Valid SQL column definition
     def change_column(name, definition)
       ddl("alter table `%s` modify column `%s` %s" % [@name, name, definition])
+    end
+
+    # Rename an existing column
+    #
+    # @example
+    #
+    #   Lhm.change_table(:users) do |m|
+    #     m.rename_column(:comment, :old_comments, "VARCHAR(12) DEFAULT '0' NOT NULL")
+    #   end
+    #
+    # @param [String] name Name of the column to rename
+    # @param [String] new_name New name for the column
+    # @param [String] definition Valid SQL column definition
+    def rename_column(name, new_name, definition)
+      # XXX Use name.assoc? @remamed.from || new_name.assoc? @remamed.to once renamer.rb factored out.
+      raise Error.new("Column was already renamed!") if (@renamed.flatten & [name, new_name]).any?
+      @renamed << [name.to_s, new_name.to_s]
+      ddl("alter table `%s` change `%s` `%s` %s" % [@name, name, new_name, definition])
     end
 
     # Remove a column from a table

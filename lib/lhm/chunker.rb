@@ -9,6 +9,9 @@ module Lhm
     include Command
     include SqlHelper
 
+    ORIGIN = 0
+    DESTINATION = 1
+
     attr_reader :connection
 
     # Copy from origin to destination in chunks of size `stride`. Sleeps for
@@ -20,6 +23,7 @@ module Lhm
       @throttle = options[:throttle] || 100
       @start = options[:start] || select_start
       @limit = options[:limit] || select_limit
+      @renamed = options[:renamed] || []
     end
 
     # Copies chunks of size `stride`, starting from `start` up to id `limit`.
@@ -42,8 +46,8 @@ module Lhm
     end
 
     def copy(lowest, highest)
-      "insert ignore into `#{ destination_name }` (#{ columns }) " +
-      "select #{ columns } from `#{ origin_name }` " +
+      "insert ignore into `#{ destination_name }` (#{ destination_columns }) " +
+      "select #{ origin_columns } from `#{ origin_name }` " +
       "where `id` between #{ lowest } and #{ highest }"
     end
 
@@ -69,6 +73,18 @@ module Lhm
 
     def origin_name
       @migration.origin.name
+    end
+
+    def origin_columns
+      with_renamed_columns_for ORIGIN
+    end
+
+    def destination_columns
+      with_renamed_columns_for DESTINATION
+    end
+
+    def with_renamed_columns_for(index)
+      "#{(@renamed.map{|a| a[index]} << '').join(', ')}#{columns}"
     end
 
     def columns

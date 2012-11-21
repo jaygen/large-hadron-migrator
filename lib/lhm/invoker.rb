@@ -35,6 +35,7 @@ module Lhm
       end
 
       migration = @migrator.run
+      options[:renamed] = @migrator.renamed
 
       Entangler.new(migration, @connection).run do
         Chunker.new(migration, @connection, options).run
